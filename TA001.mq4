@@ -10,7 +10,7 @@ extern int slippage = 3;
 extern bool verbose = true;
 extern bool sendMail = true;
 
-const string version = "1.2";
+const string version = "1.3";
 
 int init() {
    return(0);
@@ -166,18 +166,21 @@ int start() {
          continue;
       }
       const double orderLots = OrderLots();
+      const int orderType = OrderType();
       if (OrderClose(orderTicket, orderLots, closePrice, slippage, clrNONE)) {
          if (sendMail) {
             emailText = StringConcatenate(emailText, "\n", "Closed order: ", "ticket=", orderTicket, ", ",
-                                                                            "lots=", orderLots, ", ",
-                                                                            "openPrice=", OrderOpenPrice(), ", ",
-                                                                            "closePrice=", closePrice, ", ",
-                                                                            "expectedProfit=", OrderProfit());
+                                                                             "type=", getTypeString(orderType), ", ",
+                                                                             "lots=", orderLots, ", ",
+                                                                             "openPrice=", OrderOpenPrice(), ", ",
+                                                                             "closePrice=", closePrice, ", ",
+                                                                             "expectedProfit=", OrderProfit());
          }
          changed = true;
       } else {
          if (verbose) {
             Print("Failed to close order: ", "ticket=", orderTicket, ", ",
+                                             "type=", getTypeString(orderType), ", ",
                                              "lots=", orderLots, ", ",
                                              "openPrice=", OrderOpenPrice(),
                                              "closePrice=", closePrice, ", ",
