@@ -37,7 +37,7 @@ int start() {
       emailText = StringConcatenate("Version: ", version, "\n",
                                     "Market status: ", "Ask=", Ask, ", ",
                                                        "Bid=",  Bid, "\n",
-                                    "Account status: ", "MarginLevel=", getMarginLevel(), ", "
+                                    "Account status: ", "MarginLevel=", formatDouble(getMarginLevel(), 0), "%, "
                                                         "AccountBalance=", formatDouble(AccountBalance(), 0),
                                     "\n---");
    }
@@ -46,7 +46,7 @@ int start() {
       Print("start() -> begin: version=", version);
       Print("Current status: ", "Ask=", Ask, ", ",
                                 "Bid=", Bid, ", ",
-                                "MarginLevel=", getMarginLevel());
+                                "MarginLevel=", getMarginLevel(), "%");
    }
 
    // iterate all orders
@@ -290,7 +290,7 @@ int start() {
 
    if (changed) {
       if (verbose) {
-         Print("New margin level: ", getMarginLevel());
+         Print("New margin level: ", getMarginLevel(), "%");
       }
       if (sendMail) {
          reportByEmail(emailSubject, emailText);
@@ -306,7 +306,7 @@ int start() {
 }
 
 void reportByEmail(string emailSubject, string emailText) {
-   emailText = StringConcatenate(emailText, "\n---\n", "Account status: ", "MarginLevel=", getMarginLevel(), ", ",
+   emailText = StringConcatenate(emailText, "\n---\n", "Account status: ", "MarginLevel=", formatDouble(getMarginLevel(), 0), "%, ",
                                                                            "AccountBalance=", formatDouble(AccountBalance(), 0));
    SendMail(emailSubject, emailText);
 }
@@ -315,7 +315,7 @@ bool hasEnoughMarginLevel() {
    const double marginLevel = getMarginLevel();
    if (marginLevel != 0 && marginLevel < minMarginLevel) {
       if (verbose) {
-         Print("Margin level too low: ", marginLevel);
+         Print("Margin level too low: ", marginLevel, "%");
       }
       return(false);
    } else {
