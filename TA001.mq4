@@ -7,7 +7,7 @@ extern double maxPrice = 118;
 extern double minPrice = 108;
 extern double minMarginLevel = 150;
 extern int slippage = 3;
-extern bool verbose = true;
+extern bool verbose = false;
 extern bool sendMail = true;
 
 const string version = "1.3";
@@ -28,7 +28,7 @@ int start() {
    }
 
    // convert amount to lots
-   const double lots = amount / MarketInfo(Symbol() ,MODE_LOTSIZE);
+   const double lots = amount / MarketInfo(Symbol(), MODE_LOTSIZE);
    
    // email subject and text to send if `sendMail` is enabled
    string emailSubject, emailText;
