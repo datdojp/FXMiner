@@ -10,7 +10,7 @@ extern int slippage = 3;
 extern bool verbose = false;
 extern bool sendMail = true;
 
-const string version = "1.3";
+const string version = "1.4";
 
 int init() {
    return(0);
@@ -21,12 +21,6 @@ int deinit() {
 }
 
 int start() {
-   // check if symbole is USDJPY
-   if (StringFind(_Symbol, "USDJPY", 0) == -1) {
-      Alert("This EA is for USDJPY only");
-      return(0);
-   }
-
    // convert amount to lots
    const double lots = amount / MarketInfo(Symbol(), MODE_LOTSIZE);
    
