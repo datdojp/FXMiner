@@ -3,14 +3,17 @@
 extern double priceDiffBetweenOrders = 100;
 extern double priceDiffToTakeProfit = 100;
 extern int amount = 1000;
-extern double maxPrice = 118;
-extern double minPrice = 108;
+extern double maxPrice = 113;
+extern double minPrice = 107;
+extern double maxBuyPrice = 112;
+extern double minSellPrice = 108;
 extern double minMarginLevel = 150;
 extern int slippage = 3;
 extern bool verbose = false;
 extern bool sendMail = true;
+extern string mailSubject = "[TA001] Account change notification";
 
-const string version = "1.4";
+const string version = "1.5";
 
 int init() {
    return(0);
@@ -27,7 +30,7 @@ int start() {
    // email subject and text to send if `sendMail` is enabled
    string emailSubject, emailText;
    if (sendMail) {
-      emailSubject = StringConcatenate("[TA001] Account change notification");
+      emailSubject = mailSubject;
       emailText = StringConcatenate("Version: ", version, "\n",
                                     "Market status: ", "Ask=", Ask, ", ",
                                                        "Bid=",  Bid, "\n",
@@ -199,7 +202,7 @@ int start() {
       Print("nearestBuyOrder_Ticket=", nearestBuyOrder_Ticket, ", ",
             "nearestBuyOrder_OpenPriceDiff=", nearestBuyOrder_OpenPriceDiff, ", ");
    }
-   if (minPrice <= Ask && Ask <= maxPrice) {
+   if (minPrice <= Ask && Ask <= maxPrice && Ask <= maxBuyPrice) {
       int n;
       if (nearestBuyOrder_Ticket == -1) {
          n = 1;
@@ -243,7 +246,7 @@ int start() {
       Print("nearestSellOrder_Ticket=", nearestSellOrder_Ticket, ", ",
             "nearestSellOrder_OpenPriceDiff=", nearestSellOrder_OpenPriceDiff);
    }
-   if (minPrice <= Bid && Bid <= maxPrice) {
+   if (minPrice <= Bid && Bid <= maxPrice && minSellPrice <= Bid) {
       int n;
       if (nearestSellOrder_Ticket == -1) {
          n = 1;
