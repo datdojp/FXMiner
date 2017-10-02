@@ -3,19 +3,29 @@
 extern double priceDiffBetweenOrders = 100;
 extern double priceDiffToTakeProfit = 100;
 extern int amount = 1000;
-extern double maxPrice = 113;
-extern double minPrice = 107;
-extern double maxBuyPrice = 112;
-extern double minSellPrice = 108;
-extern double minMarginLevel = 150;
+extern double maxPrice = 200;
+extern double minPrice = 50;
+extern double maxBuyPrice = 200;
+extern double minSellPrice = 50;
+extern double minMarginLevel = 300;
 extern int slippage = 3;
 extern bool verbose = false;
 extern bool sendMail = true;
 extern string mailSubject = "[TA001] Account change notification";
 
-const string version = "1.5";
+extern double closeAllOrders_Anytime_AtProfitRatio = 2;
+extern double closeAllOrders_AtBalancedPoint_AtProfitRatio = 1.5;
+
+const string version = "2.0";
+
+double previous_CloseAllOrders_Balance = 0;
+datetime previous_CloseAllOrders_DateTime = NULL;
+double previous_SumProfit_AllBuyOrders = 0;
+double previous_SumProfit_AllSellOrders = 0;
 
 int init() {
+    previous_CloseAllOrders_Balance = AccountBalance();
+    previous_CloseAllOrders_DateTime = TimeCurrent();
     return(0);
 }
 
@@ -61,6 +71,8 @@ int start() {
     double nearestBuyOrder_OpenPriceDiff = 0;
     int nearestSellOrder_Ticket = -1;
     double nearestSellOrder_OpenPriceDiff = 0;
+    double sumProfit_AllBuyOrders = 0;
+    double sumProfit_AllSellOrders = 0;
     for (int pos = 0; pos < nOrders; pos++) {
         // select order
         if (!OrderSelect(pos, SELECT_BY_POS, MODE_TRADES)) {
@@ -119,6 +131,13 @@ int start() {
                   "closePriceDiff=", closePriceDiff);
         }
 
+        // calculate sumProfit_xxx
+        if (type == OP_BUY) {
+            sumProfit_AllBuyOrders = sumProfit_AllBuyOrders + OrderProfit();
+        } else if (type == OP_SELL) {
+            sumProfit_AllSellOrders = sumProfit_AllSellOrders + OrderProfit();
+        }
+
         // if order already reached its exptected profit, close it
         if (closePriceDiff > priceDiffToTakeProfit) {
             ordersWillBeClosed_Ticket[nOrderWillBeClosed] = ticket;
@@ -148,6 +167,33 @@ int start() {
                 nearestSellOrder_OpenPriceDiff = openPriceDiff;
             }
         }
+    }
+
+    // check if we should close all orders
+    bool shouldCloseAllOrders = false;
+    double sumProfit_AllOrders = sumProfit_AllBuyOrders + sumProfit_AllSellOrders;
+    if (sumProfit_AllOrders == 0) {
+        sumProfit_AllOrders = 0.000001;
+    }
+    double profitRatio = MathAbs((AccountBalance() - previous_CloseAllOrders_Balance) / sumProfit_AllOrders);
+    if (profitRatio >= closeAllOrders_Anytime_AtProfitRatio) {
+        shouldCloseAllOrders = true;
+    } else {
+        bool isAtBalancedPoint = (sumProfit_AllBuyOrders - sumProfit_AllSellOrders) * (previous_SumProfit_AllBuyOrders - previous_SumProfit_AllSellOrders) < 0;
+        if (isAtBalancedPoint && profitRatio >= closeAllOrders_AtBalancedPoint_AtProfitRatio) {
+            shouldCloseAllOrders = true;
+        }
+    }
+    if (shouldCloseAllOrders) {
+        closeAllOrders();
+        previous_CloseAllOrders_Balance = AccountBalance();
+        previous_CloseAllOrders_DateTime = TimeCurrent();
+        previous_SumProfit_AllBuyOrders = 0;
+        previous_SumProfit_AllSellOrders = 0;
+        return(0);
+    } else {
+        previous_SumProfit_AllBuyOrders = sumProfit_AllBuyOrders;
+        previous_SumProfit_AllSellOrders = sumProfit_AllSellOrders;
     }
 
     // flag to indicate that there is new action (close/open order)
@@ -369,4 +415,34 @@ string formatDouble(double number, int precision, string pcomma=",", string ppoi
     if (sleft!="")   formated = sleft+comma+formated;
     if (precision>0) formated = formated+ppoint+sright;
     return(formated);
+}
+
+double readDoubleFromFile(string key) {
+    // implement later
+    return 0;
+}
+
+void writeDoubleToFile(string key, double val) {
+    // implement late
+}
+
+void closeAllOrders() {
+    int nOrders = OrdersTotal();
+    int tickets[];
+    ArrayResize(tickets, nOrders);
+    int nTickets = 0;
+    for (int pos = 0; pos < nOrders; pos++) {
+        if (!OrderSelect(pos, SELECT_BY_POS, MODE_TRADES)) {
+            continue;
+        }
+        if (OrderSymbol() != _Symbol) {
+            continue;
+        }
+        tickets[nTickets] = OrderTicket();
+        nTickets++;
+    }
+    for (int i = 0; i < nTickets; i++) {
+        OrderSelect(tickets[i], SELECT_BY_TICKET, MODE_TRADES);
+        OrderClose(OrderTicket(), OrderLots(), OrderClosePrice(), slippage, clrNONE);
+    }
 }
