@@ -16,7 +16,7 @@ extern string mailSubject = "[TA001] Account change notification";
 extern double closeAllOrders_Anytime_AtProfitRatio = 2;
 extern double closeAllOrders_AtBalancedPoint_AtProfitRatio = 1.5;
 
-const string version = "2.0";
+const string version = "2.1";
 
 double previous_CloseAllOrders_Balance = 0;
 datetime previous_CloseAllOrders_DateTime = NULL;
@@ -177,7 +177,11 @@ int start() {
     }
     double profitRatio = MathAbs((AccountBalance() - previous_CloseAllOrders_Balance) / sumProfit_AllOrders);
     if (profitRatio >= closeAllOrders_Anytime_AtProfitRatio) {
-        shouldCloseAllOrders = true;
+        if (profitRatio < 10) {
+            shouldCloseAllOrders = true;
+        } else {
+            shouldCloseAllOrders = false;
+        }
     } else {
         bool isAtBalancedPoint = (sumProfit_AllBuyOrders - sumProfit_AllSellOrders) * (previous_SumProfit_AllBuyOrders - previous_SumProfit_AllSellOrders) < 0;
         if (isAtBalancedPoint && profitRatio >= closeAllOrders_AtBalancedPoint_AtProfitRatio) {
