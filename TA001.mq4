@@ -13,19 +13,18 @@ extern bool verbose = false;
 extern bool sendMail = true;
 extern string mailSubject = "[TA001] Account change notification";
 
-extern double closeAllOrders_Anytime_AtProfitRatio = 2;
+extern double previous_CloseAllOrders_Balance = 0;
 extern double closeAllOrders_AtBalancedPoint_AtProfitRatio = 1.5;
 
 const string version = "2.1";
 
-double previous_CloseAllOrders_Balance = 0;
-datetime previous_CloseAllOrders_DateTime = NULL;
 double previous_SumProfit_AllBuyOrders = 0;
 double previous_SumProfit_AllSellOrders = 0;
 
 int init() {
-    previous_CloseAllOrders_Balance = AccountBalance();
-    previous_CloseAllOrders_DateTime = TimeCurrent();
+    if (previous_CloseAllOrders_Balance == 0) {
+        previous_CloseAllOrders_Balance = AccountBalance();
+    }
     return(0);
 }
 
@@ -170,28 +169,19 @@ int start() {
     }
 
     // check if we should close all orders
-    bool shouldCloseAllOrders = false;
     double sumProfit_AllOrders = sumProfit_AllBuyOrders + sumProfit_AllSellOrders;
     if (sumProfit_AllOrders == 0) {
-        sumProfit_AllOrders = 0.000001;
+        sumProfit_AllOrders = 0.000001; // prevent division by zero
     }
     double profitRatio = MathAbs((AccountBalance() - previous_CloseAllOrders_Balance) / sumProfit_AllOrders);
-    if (profitRatio >= closeAllOrders_Anytime_AtProfitRatio) {
-        if (profitRatio < 10) {
-            shouldCloseAllOrders = true;
-        } else {
-            shouldCloseAllOrders = false;
-        }
-    } else {
-        bool isAtBalancedPoint = (sumProfit_AllBuyOrders - sumProfit_AllSellOrders) * (previous_SumProfit_AllBuyOrders - previous_SumProfit_AllSellOrders) < 0;
-        if (isAtBalancedPoint && profitRatio >= closeAllOrders_AtBalancedPoint_AtProfitRatio) {
-            shouldCloseAllOrders = true;
-        }
-    }
+    bool isAtBalancedPoint = (sumProfit_AllBuyOrders - sumProfit_AllSellOrders) * (previous_SumProfit_AllBuyOrders - previous_SumProfit_AllSellOrders) < 0;
+    double balanceRatio = AccountBalance() / previous_CloseAllOrders_Balance;
+    bool shouldCloseAllOrders = isAtBalancedPoint &&
+                                balanceRatio > 1.2 && // prevent immature close-all
+                                profitRatio >= closeAllOrders_AtBalancedPoint_AtProfitRatio;
     if (shouldCloseAllOrders) {
         closeAllOrders();
         previous_CloseAllOrders_Balance = AccountBalance();
-        previous_CloseAllOrders_DateTime = TimeCurrent();
         previous_SumProfit_AllBuyOrders = 0;
         previous_SumProfit_AllSellOrders = 0;
         return(0);
