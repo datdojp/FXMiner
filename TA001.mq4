@@ -3,11 +3,11 @@
 extern double priceDiffBetweenOrders = 100;
 extern double priceDiffToTakeProfit = 100;
 extern int amount = 1000;
-extern double maxPrice = 200;
-extern double minPrice = 50;
-extern double maxBuyPrice = 200;
-extern double minSellPrice = 50;
-extern double minMarginLevel = 300;
+extern double maxPrice = 1000; // default: unlimited. Need to set manually
+extern double minPrice = 0; // default: unlimited. Need to set manually
+extern double maxBuyPrice = 1000; // default: unlimited. Need to set manually
+extern double minSellPrice = 0; // default: unlimited. Need to set manually
+extern double minMarginLevel = 100; // default: unlimited. Need to set manually
 extern int slippage = 3;
 extern bool verbose = false;
 extern bool sendMail = true;
