@@ -16,7 +16,7 @@ extern string mailSubject = "[TA001] Account change notification";
 extern double previous_CloseAllOrders_Balance = 0;
 extern double closeAllOrders_AtBalancedPoint_AtProfitRatio = 1.5;
 
-const string version = "2.1";
+const string version = "2.2";
 
 double previous_SumProfit_AllBuyOrders = 0;
 double previous_SumProfit_AllSellOrders = 0;
@@ -40,12 +40,16 @@ int start() {
     string emailSubject, emailText;
     if (sendMail) {
         emailSubject = mailSubject;
-        emailText = StringConcatenate("Version: ", version, "\n",
-                                      "Market status: ", "Ask=", Ask, ", ",
-                                      "Bid=",  Bid, "\n",
-                                      "Account status: ", "MarginLevel=", formatDouble(getMarginLevel(), 0), "%, "
-                                      "AccountBalance=", formatDouble(AccountBalance(), 0),
-                                      "\n---");
+        emailText = StringConcatenate("Symbol: ", _Symbol, "\n",
+                                      "Market status:", "\n",
+                                      "    - Ask=", Ask, "\n",
+                                      "    - Bid=",  Bid, "\n",
+                                      "Account status: ", "\n",
+                                      "    - MarginLevel=", formatDouble(getMarginLevel(), 0), "%", "\n",
+                                      "    - AccountBalance=", formatDouble(AccountBalance(), 0), "\n",
+                                      "    - Valuation profit/lost=", formatDouble(AccountEquity() - AccountBalance(), 0), "\n",
+                                      "Version: ", version, "\n",
+                                      "----------", "\n");
     }
 
     if (verbose) {
@@ -210,14 +214,14 @@ int start() {
         const int orderType = OrderType();
         if (OrderClose(orderTicket, orderLots, closePrice, slippage, clrNONE)) {
             if (sendMail) {
-                emailText = StringConcatenate(emailText, "\n",
-                                              "Closed order: ",
-                                              "ticket=", orderTicket, ", ",
-                                              "type=", getTypeString(orderType), ", ",
-                                              "lots=", orderLots, ", ",
-                                              "openPrice=", OrderOpenPrice(), ", ",
-                                              "closePrice=", closePrice, ", ",
-                                              "expectedProfit=", OrderProfit());
+                emailText = StringConcatenate(emailText,
+                                              "Closed order:", "\n",
+                                              "    - ticket=", orderTicket, "\n",
+                                              "    - type=", getTypeString(orderType), "\n",
+                                              "    - lots=", orderLots, "\n",
+                                              "    - openPrice=", OrderOpenPrice(), "\n",
+                                              "    - closePrice=", closePrice, "\n",
+                                              "    - expectedProfit=", OrderProfit(), "\n");
             }
             changed = true;
         } else {
@@ -270,11 +274,11 @@ int start() {
                 }
             } else {
                 if (sendMail) {
-                    emailText = StringConcatenate(emailText, "\n",
-                                                  "Opened order: ",
-                                                  "type=BUY", ", ",
-                                                  "lots=", lots, ", ",
-                                                  "price=", Ask);
+                    emailText = StringConcatenate(emailText,
+                                                  "Opened order: ", "\n",
+                                                  "    - type=BUY", "\n",
+                                                  "    - lots=", lots, "\n",
+                                                  "    - price=", Ask, "\n");
                 }
                 changed = true;
                 if (!hasEnoughMarginLevel()) {
@@ -317,11 +321,11 @@ int start() {
                 }
             } else {
                 if (sendMail) {
-                    emailText = StringConcatenate(emailText, "\n",
-                                                  "Opened order: ",
-                                                  "type=SELL", ", ",
-                                                  "lots=", lots, ", ",
-                                                  "price=", Bid);
+                    emailText = StringConcatenate(emailText,
+                                                  "Opened order:", "\n",
+                                                  "    - type=SELL", "\n",
+                                                  "    - lots=", lots, "\n",
+                                                  "    - price=", Bid, "\n");
                 }
                 changed = true;
                 if (!hasEnoughMarginLevel()) {
@@ -356,10 +360,12 @@ int start() {
 }
 
 void reportByEmail(string emailSubject, string emailText) {
-    emailText = StringConcatenate(emailText, "\n---\n",
-                                  "Account status: ",
-                                  "MarginLevel=", formatDouble(getMarginLevel(), 0), "%, ",
-                                  "AccountBalance=", formatDouble(AccountBalance(), 0));
+    emailText = StringConcatenate(emailText,
+                                  "----------\n",
+                                  "Account status:", "\n",
+                                  "    - MarginLevel=", formatDouble(getMarginLevel(), 0), "%", "\n",
+                                  "    - AccountBalance=", formatDouble(AccountBalance(), 0), "\n",
+                                  "    - Valuation profit/lost=", formatDouble(AccountEquity() - AccountBalance(), 0), "\n");
     SendMail(emailSubject, emailText);
 }
 
