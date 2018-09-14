@@ -6,14 +6,17 @@ class Martingale {
         double mPrevBid;
         double mTopPrice;
         double mBottomPrice;
+        double mInitialLots;
         double mLots;
-        double mTakeProfitPoints;
+        double mTakeProfit;
+        double mAccumulatedLoss;
         int mMagic;
     public:
         static const int STOP_REASON_CMD_FAILURE;
         static const int STOP_REASON_MAX_LOTS_EXCEEDED;
         static const int STOP_REASON_PROFIT_TAKEN;
-        Martingale(double topPrice, double bottomPrice, int magic);
+        static const int STOP_REASON_INVALID_ARGUMENTS;
+        Martingale(double bottomPrice, double topPrice, double takeProfit, double initialLots, int magic);
         void onTick();
         bool isStopped();
         int getStopReason();
@@ -22,16 +25,31 @@ class Martingale {
 const int Martingale::STOP_REASON_CMD_FAILURE = 0;
 const int Martingale::STOP_REASON_MAX_LOTS_EXCEEDED = 1;
 const int Martingale::STOP_REASON_PROFIT_TAKEN = 2;
+const int Martingale::STOP_REASON_INVALID_ARGUMENTS = 3;
 
-Martingale::Martingale(double bottomPrice, double topPrice, int magic) {
+Martingale::Martingale(double bottomPrice, double topPrice, double takeProfit, double _initialLots, int magic) {
+    if (topPrice < bottomPrice) {
+        Alert("Error: 'topPrice' must be greater than 'bottomPrice'");
+        mStopped = true;
+        mStopReason = STOP_REASON_INVALID_ARGUMENTS;
+        return;
+    }
+    if (topPrice - bottomPrice <= Ask - Bid) {
+        Alert("Error: corridor 's height must be greater than spread");
+        mStopped = true;
+        mStopReason = STOP_REASON_INVALID_ARGUMENTS;
+        return;
+    }
     mStopped = false;
     mStopReason = -1;
     mPrevAsk = Ask;
     mPrevBid = Bid;
     mTopPrice = topPrice;
     mBottomPrice = bottomPrice;
-    mLots = initialLots;
-    mTakeProfitPoints = takeProfitPoints;
+    mInitialLots = initialLots;
+    mLots = _initialLots;
+    mTakeProfit = takeProfit;
+    mAccumulatedLoss = 0;
     mMagic = magic;
 }
 
@@ -59,7 +77,11 @@ void Martingale::onTick() {
     if (mPrevAsk <= mTopPrice && mTopPrice <= Ask) {
         if (hasOrder) {
             if (OrderType() == OP_SELL) {
-                double nextLots = mLots * 2;
+                mAccumulatedLoss += mLots * (mTopPrice - mBottomPrice);
+                double expectedProfitOfNextOrder = mAccumulatedLoss + mInitialLots * mTakeProfit;
+                double nextLots = expectedProfitOfNextOrder / mTakeProfit;
+                double minLots = MarketInfo(_Symbol, MODE_MINLOT);
+                nextLots = MathCeil(nextLots / minLots) * minLots;
                 if (nextLots <= maxLots) {
                     if (!OrderClose(OrderTicket(), OrderLots(), Ask, slippage)) {
                         mStopped = true;
@@ -124,16 +146,16 @@ void Martingale::onTick() {
         }
     // take profit
     } else if (hasOrder) {
-        double profitPoints;
+        double profit;
         double closePrice;
         if (OrderType() == OP_BUY) {
-            profitPoints = (Bid - OrderOpenPrice()) / _Point;
+            profit = Bid - OrderOpenPrice();
             closePrice = Bid;
         } else {
-            profitPoints = (OrderOpenPrice() - Ask) / _Point;
+            profit = OrderOpenPrice() - Ask;
             closePrice = Ask;
         }
-        if (profitPoints >= mTakeProfitPoints) {
+        if (profit >= mTakeProfit) {
             if (!OrderClose(OrderTicket(), OrderLots(), closePrice, slippage)) {
                 mStopped = true;
                 mStopReason = STOP_REASON_CMD_FAILURE;

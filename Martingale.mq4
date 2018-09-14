@@ -7,10 +7,11 @@ enum START_MODE {
     WAIT = 3, // Wait
 };
 
-input double takeProfitPoints = 100;
+input double takeProfitPoints = 150;
+input double corridorHeightPoints = 100;
 input START_MODE startMode = WAIT;
-input double initialLots = 0.01;
-input double maxLots = 0.08;
+input double initialLots = 0.1;
+input double maxLots = 0.8;
 input int slippage = 1;
 
 const int MAGIC = 17090425;
@@ -21,15 +22,15 @@ void init() {
     double topPrice, bottomPrice;
     if (startMode == BUY) {
         topPrice = Ask + (slippage + 1) * _Point;
-        bottomPrice = topPrice - takeProfitPoints * _Point;
+        bottomPrice = topPrice - corridorHeightPoints * _Point;
     } else if (startMode == SELL) {
         bottomPrice = Bid - (slippage + 1) * _Point;
-        topPrice = bottomPrice + takeProfitPoints * _Point;
+        topPrice = bottomPrice + corridorHeightPoints * _Point;
     } else { // startMode == WAIT
-        topPrice = (Ask + Bid) / 2 + takeProfitPoints * _Point / 2;
-        bottomPrice = (Ask + Bid) / 2 - takeProfitPoints * _Point / 2;
+        topPrice = (Ask + Bid) / 2 + corridorHeightPoints * _Point / 2;
+        bottomPrice = (Ask + Bid) / 2 - corridorHeightPoints * _Point / 2;
     }
-    martingale = new Martingale(bottomPrice, topPrice, MAGIC);
+    martingale = new Martingale(bottomPrice, topPrice, takeProfitPoints * _Point, initialLots, MAGIC);
 
     // alert & log
     string message = "Started martingale for " + _Symbol + " with price range: " + topPrice + " .. " + bottomPrice;
