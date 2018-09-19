@@ -30,7 +30,7 @@ void init() {
         topPrice = (Ask + Bid) / 2 + corridorHeightPoints * _Point / 2;
         bottomPrice = (Ask + Bid) / 2 - corridorHeightPoints * _Point / 2;
     }
-    martingale = new Martingale(bottomPrice, topPrice, takeProfitPoints * _Point, initialLots, MAGIC);
+    martingale = new Martingale(bottomPrice, topPrice, takeProfitPoints * _Point, initialLots, maxLots, MAGIC);
 
     // alert & log
     string message = "Started martingale for " + _Symbol + " with price range: " + topPrice + " .. " + bottomPrice;
