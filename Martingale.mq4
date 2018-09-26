@@ -1,5 +1,6 @@
 // Martingale v0.1
 #include "Martingale.mqh";
+#include "EAConfigUtil.mqh";
 
 enum START_MODE {
     BUY = 1, // Buy
@@ -19,23 +20,55 @@ const int MAGIC = 17090425;
 Martingale *martingale;
 
 void init() {
-    double topPrice, bottomPrice;
-    if (startMode == BUY) {
-        topPrice = Ask + (slippage + 1) * _Point;
-        bottomPrice = topPrice - corridorHeightPoints * _Point;
-    } else if (startMode == SELL) {
-        bottomPrice = Bid - (slippage + 1) * _Point;
-        topPrice = bottomPrice + corridorHeightPoints * _Point;
-    } else { // startMode == WAIT
-        topPrice = (Ask + Bid) / 2 + corridorHeightPoints * _Point / 2;
-        bottomPrice = (Ask + Bid) / 2 - corridorHeightPoints * _Point / 2;
+    string alertMessage;
+    EAConfigUtil *configUtil = new EAConfigUtil("Martingale");
+    double _bottomPrice, _topPrice, _takeProfit, _initialLots, _maxLots;
+    Field configs[] = {
+        { "bottomPrice", DOUBLE },
+        { "topPrice", DOUBLE },
+        { "takeProfit", DOUBLE },
+        { "initialLots", DOUBLE },
+        { "maxLots", DOUBLE }
+    };
+    if (configUtil.hasConfigs()) {
+        configUtil.readConfigs(configs);
+        _bottomPrice = configs[0].doubleValue;
+        _topPrice = configs[1].doubleValue;
+        _takeProfit = configs[2].doubleValue;
+        _initialLots = configs[3].doubleValue;
+        _maxLots = configs[4].doubleValue;
+        alertMessage = "Create Martingale from configs file for " + _Symbol + ": " +
+                       "bottomPrice=" + DoubleToString(_bottomPrice) + ", " +
+                       "topPrice=" + DoubleToString(_topPrice) + ", " +
+                       "takeProfit=" + DoubleToString(_takeProfit) + ", " +
+                       "initialLots=" + DoubleToString(_initialLots) + ", " +
+                       "maxLots=" + DoubleToString(_maxLots);
+    } else {
+        if (startMode == BUY) {
+            _topPrice = Ask + (slippage + 1) * _Point;
+            _bottomPrice = _topPrice - corridorHeightPoints * _Point;
+        } else if (startMode == SELL) {
+            _bottomPrice = Bid - (slippage + 1) * _Point;
+            _topPrice = _bottomPrice + corridorHeightPoints * _Point;
+        } else { // startMode == WAIT
+            _topPrice = (Ask + Bid) / 2 + corridorHeightPoints * _Point / 2;
+            _bottomPrice = (Ask + Bid) / 2 - corridorHeightPoints * _Point / 2;
+        }
+        _takeProfit = takeProfitPoints * _Point;
+        _initialLots = initialLots;
+        _maxLots = maxLots;
+        configs[0].doubleValue = _bottomPrice;
+        configs[1].doubleValue = _topPrice;
+        configs[2].doubleValue = _takeProfit;
+        configs[3].doubleValue = _initialLots;
+        configs[4].doubleValue = _maxLots;
+        configUtil.writeConfigs(configs);
+        alertMessage = "Create Martingale from inputs for " + _Symbol;
     }
-    martingale = new Martingale(bottomPrice, topPrice, takeProfitPoints * _Point, initialLots, maxLots, MAGIC);
 
-    // alert & log
-    string message = "Started martingale for " + _Symbol + " with price range: " + topPrice + " .. " + bottomPrice;
-    Alert(message);
-    Print(message);
+    // create Martingale object
+    martingale = new Martingale(_bottomPrice, _topPrice, _takeProfit, _initialLots, _maxLots, MAGIC);
+    Alert(alertMessage);
 }
 
 void OnTick() {
@@ -52,7 +85,6 @@ void OnTick() {
         }
         string message = "Martingale EA of " + _Symbol + " was stopped with reason: " + reason;
         Alert(message);
-        Print(message);
 
         // terminal EA
         ExpertRemove();

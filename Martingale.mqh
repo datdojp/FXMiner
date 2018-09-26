@@ -30,14 +30,14 @@ const int Martingale::STOP_REASON_MAX_LOTS_EXCEEDED = 1;
 const int Martingale::STOP_REASON_PROFIT_TAKEN = 2;
 const int Martingale::STOP_REASON_INVALID_ARGUMENTS = 3;
 
-Martingale::Martingale(double bottomPrice, double topPrice, double takeProfit, double _initialLots, double _maxLots, int magic) {
-    if (topPrice < bottomPrice) {
+Martingale::Martingale(double _bottomPrice, double _topPrice, double _takeProfit, double _initialLots, double _maxLots, int _magic) {
+    if (_topPrice < _bottomPrice) {
         Alert("Error: 'topPrice' must be greater than 'bottomPrice'");
         mStopped = true;
         mStopReason = STOP_REASON_INVALID_ARGUMENTS;
         return;
     }
-    if (topPrice - bottomPrice <= Ask - Bid) {
+    if (_topPrice - _bottomPrice <= Ask - Bid) {
         Alert("Error: corridor 's height must be greater than spread");
         mStopped = true;
         mStopReason = STOP_REASON_INVALID_ARGUMENTS;
@@ -47,14 +47,14 @@ Martingale::Martingale(double bottomPrice, double topPrice, double takeProfit, d
     mStopReason = -1;
     mPrevAsk = Ask;
     mPrevBid = Bid;
-    mTopPrice = topPrice;
-    mBottomPrice = bottomPrice;
-    mInitialLots = initialLots;
+    mTopPrice = _topPrice;
+    mBottomPrice = _bottomPrice;
+    mInitialLots = _initialLots;
     mLots = _initialLots;
     mMaxLots = _maxLots;
-    mTakeProfit = takeProfit;
+    mTakeProfit = _takeProfit;
     mAccumulatedLoss = 0;
-    mMagic = magic;
+    mMagic = _magic;
 }
 
 void Martingale::onTick() {
