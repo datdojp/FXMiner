@@ -49,7 +49,7 @@ void Martingale::onTick() {
     for (int pos = OrdersTotal()-1; pos >= 0; pos--) {
         if (!OrderSelect(pos, SELECT_BY_POS, MODE_TRADES)) {
             onCommandFailure();
-            return;
+            // return;
         }
         if (OrderSymbol() != _Symbol) { continue; }
         if (OrderType() != OP_BUY && OrderType() != OP_SELL) { continue; }
@@ -63,62 +63,66 @@ void Martingale::onTick() {
     if (mPrevAsk <= mTopPrice && mTopPrice <= Ask) {
         if (hasOrder) {
             if (OrderType() == OP_SELL) {
+                if (!OrderClose(OrderTicket(), OrderLots(), Ask, slippage)) {
+                    onCommandFailure();
+                    // return;
+                }
                 nextLots = calcNextLots();
                 if (nextLots <= mMaxLots) {
-                    if (!OrderClose(OrderTicket(), OrderLots(), Ask, slippage)) {
-                        onCommandFailure();
-                        return;
-                    }
                     mLots = nextLots;
                     if (OrderSend(_Symbol, OP_BUY, mLots, Ask, slippage, 0, 0, NULL, mMagic) == -1) {
                         onCommandFailure();
-                        return;
+                        // return;
                     }
                 } else {
                     onMaxLotsExceeded();
-                    return;
+                    mLots = mInitialLots;
+                    mAccumulatedLoss = 0;
+                    // return;
                 }
             }
         } else {
             if (mLots <= mMaxLots) {
                 if (OrderSend(_Symbol, OP_BUY, mLots, Ask, slippage, 0, 0, NULL, mMagic) == -1) {
                     onCommandFailure();
-                    return;
+                    // return;
                 }
             } else {
                 onMaxLotsExceeded();
-                return;
+                // return;
             }
         }
     // if price crosses over bottomPrice => close BUY order and open SELL
     } else if (Bid <= mBottomPrice && mBottomPrice <= mPrevBid) {
         if (hasOrder) {
             if (OrderType() == OP_BUY) {
+                if (!OrderClose(OrderTicket(), OrderLots(), Bid, slippage)) {
+                    onCommandFailure();
+                    // return;
+                }
                 nextLots = calcNextLots();
                 if (nextLots <= mMaxLots) {
-                    if (!OrderClose(OrderTicket(), OrderLots(), Bid, slippage)) {
-                        onCommandFailure();
-                        return;
-                    }
                     mLots = nextLots;
                     if (OrderSend(_Symbol, OP_SELL, mLots, Bid, slippage, 0, 0, NULL, mMagic) == -1) {
                         onCommandFailure();
-                        return;
+                        // return;
                     }
                 } else {
                     onMaxLotsExceeded();
-                    return;
+                    mLots = mInitialLots;
+                    mAccumulatedLoss = 0;
+                    // return;
                 }
             }
         } else {
             if (mLots <= mMaxLots) {
                 if (OrderSend(_Symbol, OP_SELL, mLots, Bid, slippage, 0, 0, NULL, mMagic) == -1) {
                     onCommandFailure();
-                    return;
+                    // return;
                 }
             } else {
                 onMaxLotsExceeded();
-                return;
+                // return;
             }
         }
     // take profit
@@ -135,12 +139,13 @@ void Martingale::onTick() {
         if (profit >= mTakeProfit) {
             if (!OrderClose(OrderTicket(), OrderLots(), closePrice, slippage)) {
                 onCommandFailure();
-                return;
+                // return;
             }
             mLots = mInitialLots;
-            Alert("[Martingale] Error: profit taken");
-            ExpertRemove();
-            return;
+            mAccumulatedLoss = 0;
+            Alert("[Martingale] Profit taken");
+            // ExpertRemove();
+            // return;
         }
     }
     mPrevAsk = Ask;
@@ -149,20 +154,26 @@ void Martingale::onTick() {
 
 void Martingale::onCommandFailure() {
     Alert("[Martingale] Error: command failure: lastError=" + GetLastError());
-    ExpertRemove();
+    //ExpertRemove();
 }
 
 void Martingale::onMaxLotsExceeded() {
     Alert("[Martingale] Error: max lots exceeded");
-    ExpertRemove();
+    // ExpertRemove();
 }
 
 double Martingale::calcNextLots() {
+    // Alert("[calcNextLots]mAccumulatedLoss=" + DoubleToString(mAccumulatedLoss));
     mAccumulatedLoss += mLots * (mTopPrice - mBottomPrice);
+    // Alert("[calcNextLots]mAccumulatedLoss=" + DoubleToString(mAccumulatedLoss));
     double expectedProfitOfNextOrder = mAccumulatedLoss + mInitialLots * mTakeProfit;
+    // Alert("[calcNextLots]expectedProfitOfNextOrder=" + DoubleToString(expectedProfitOfNextOrder));
     double nextLots = expectedProfitOfNextOrder / mTakeProfit;
+    // Alert("[calcNextLots]nextLots=" + DoubleToString(nextLots));
     double minLots = MarketInfo(_Symbol, MODE_MINLOT);
+    // Alert("[calcNextLots]minLots=" + DoubleToString(minLots));
     nextLots = calcCeil(nextLots / minLots) * minLots;
+    // Alert("[calcNextLots]nextLots=" + DoubleToString(nextLots));
     return nextLots;
 }
 
