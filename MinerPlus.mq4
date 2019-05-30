@@ -13,4 +13,6 @@ void OnTick() {
   miner.onTick();
   delete miner;
   miner = NULL;
+
+  
 }
