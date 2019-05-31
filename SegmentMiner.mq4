@@ -3,7 +3,7 @@ input int version = 20;
 const int RangeSizeInPoints = 350;
 const int BuyOrdersAtPoints[3] = { 50, 100, 150 };
 const int SellOrdersAtPoints[3] = { 200, 250, 300 };
-const double Lots = 0.01;
+const double Lots = 0.5;
 const int slippage = 1;
 
 int prevRangeBottom = 0;
@@ -12,10 +12,6 @@ struct ProfitAndTicket {
     double profit;
     int orderTicket;
 };
-
-void init() {
-
-}
 
 void OnTick() {
     int buyRangeBottom = getRangeBottom(Ask);
@@ -39,6 +35,7 @@ int getRangeBottom(double price) {
 }
 
 void processOldRange(int rangeBottom) {
+    int rangeTop = rangeBottom + RangeSizeInPoints;
     double totalProfit = 0;
     double totalLoss = 0;
     int profitOrderTickets[];
@@ -48,6 +45,13 @@ void processOldRange(int rangeBottom) {
     for (int pos = 0; pos < OrdersTotal(); pos++) {
         if (!OrderSelect(pos, SELECT_BY_POS, MODE_TRADES)) {
             onCommandFailure();
+        }
+        if (OrderSymbol() != _Symbol) {
+            continue;
+        }
+        int openPriceInPoints = (int)(OrderOpenPrice() / _Point);
+        if (openPriceInPoints < rangeBottom || openPriceInPoints > rangeTop) {
+            continue;
         }
         int orderType = OrderType();
         if (
@@ -115,6 +119,9 @@ void processNewRange(int rangeBottom) {
     for (int pos = 0; pos < OrdersTotal(); pos++) {
         if (!OrderSelect(pos, SELECT_BY_POS, MODE_TRADES)) {
             onCommandFailure();
+        }
+        if (OrderSymbol() != _Symbol) {
+            continue;
         }
         int openPriceInPoints = (int)(OrderOpenPrice() / _Point);
         if (openPriceInPoints < rangeBottom || openPriceInPoints > rangeTop) {
