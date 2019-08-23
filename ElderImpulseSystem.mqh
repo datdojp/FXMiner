@@ -3,8 +3,8 @@ class ElderImpulseSystem {
       int mH1Impulse;
       int mH4Impulse;
       int mD1Impulse;
-      int getImpulse(int timeframe);
    public:
+      int getImpulse(int timeframe);
       void loadImpulses();
       ElderImpulseSystem();
       bool shouldBuy();
