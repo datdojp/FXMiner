@@ -4,7 +4,6 @@ struct MinerConfig {
     double distance;
     double takeProfit;
     int command;
-    bool shouldTrailingStop;
     int magic;
     int slippage;
 };
