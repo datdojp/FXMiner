@@ -16,7 +16,6 @@ const int inputATRTimeFrame = PERIOD_H1;
 Miner *miner;
 MinerConfig minerConfig = {};
 
-
 void init() {
     minerConfig.symbol = inputSymbol;
     minerConfig.lots = inputLots;
@@ -33,24 +32,37 @@ void init() {
 }
 
 void OnTick() {
+    // use ATR to determine distance and takeprofit
+    const double atr = iATR(inputSymbol, inputATRTimeFrame, 14, 0);
+    minerConfig.distance = NormalizeDouble(atr, MarketInfo(inputSymbol, MODE_DIGITS));
+    minerConfig.takeProfit = NormalizeDouble(atr, MarketInfo(inputSymbol, MODE_DIGITS));
+
     // use heikinashi to check if we should create new order
     HeikinAshiBar bars[] = {};
     getHeikinAshiBars(inputSymbol, inputHeikinAshiTimeFrame, 10, bars);
-    bool shouldCreateOrder = false;
-    int direction = inputCommand == OP_BUY ? 1 : -1;
-    shouldCreateOrder = direction * (bars[0].close - bars[0].open) > 0 &&
-                        direction * (bars[1].close - bars[1].open) > 0 &&
-                        (bars[1].high - bars[1].low) > inputDistance * 0.5;
-    minerConfig.shouldCreateOrder = shouldCreateOrder;
-
-    // use ATR to determine distance and takeprofit
-    const double atr = iATR(inputSymbol, inputATRTimeFrame, 14, 0);
-    const int degits = MarketInfo(inputSymbol, MODE_DIGITS);
-    minerConfig.distance = NormalizeDouble(atr * 2/3, degits);
-    minerConfig.takeProfit = NormalizeDouble(atr * 2/3, degits);
+    minerConfig.shouldCreateOrder = shouldCreateOrder(bars, minerConfig);
 
     // execute miner
     miner.onTick(minerConfig);
+}
+
+bool shouldCreateOrder(HeikinAshiBar &bars[], MinerConfig &minerConfig) {
+    int direction = minerConfig.command == OP_BUY ? 1 : -1;
+    bool shouldCreateOrder =
+        // price is on good trending/reversal
+        (
+            direction * (bars[0].close - bars[0].open) > 0 &&
+            direction * (bars[1].close - bars[1].open) > 0 &&
+            direction * (bars[2].close - bars[2].open) > 0 &&
+            (bars[1].high - bars[1].low) >= minerConfig.distance * 0.5
+        )
+        ||
+        // or price is moving very fast
+        (
+            direction * (bars[0].close - bars[0].open) > 0 &&
+            direction * (bars[1].close - bars[1].open) >= minerConfig.distance * 1.5
+        );
+    return shouldCreateOrder;
 }
 
 void deinit() {
