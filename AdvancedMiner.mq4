@@ -1,5 +1,4 @@
-#include "Miner.mqh";
-#include "HeikinAshi.mqh";
+#include "lib.mqh";
 
 const string inputSymbol = "USDJPY";
 const double inputLots = 0.02;
@@ -13,7 +12,6 @@ const int inputHeikinAshiTimeFrame = PERIOD_H1;
 
 const int inputATRTimeFrame = PERIOD_H1;
 
-Miner *miner;
 MinerConfig minerConfig = {};
 
 void init() {
@@ -27,8 +25,6 @@ void init() {
     minerConfig.shouldSetTrailingStop = false;
     minerConfig.trailingStopMinDistance = 30 * MarketInfo(inputSymbol, MODE_POINT);
     minerConfig.trailingStopBuffer = 10 * MarketInfo(inputSymbol, MODE_POINT);
-
-    miner = new Miner();
 }
 
 void OnTick() {
@@ -43,7 +39,7 @@ void OnTick() {
     minerConfig.shouldCreateOrder = shouldCreateOrder(bars, minerConfig);
 
     // execute miner
-    miner.onTick(minerConfig);
+    minerOnTick(minerConfig);
 }
 
 bool shouldCreateOrder(HeikinAshiBar &bars[], MinerConfig &minerConfig) {

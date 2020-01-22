@@ -17,18 +17,7 @@ struct MinerConfig {
     double trailingStopBuffer;
 };
 
-class Miner {
-    private:
-        void onCommandFailure();
-    public:
-        Miner();
-        void onTick(MinerConfig &config);
-};
-
-Miner::Miner() {
-}
-
-void Miner::onTick(MinerConfig &config) {
+void minerOnTick(MinerConfig &config) {
     // validate config
     if (config.command != OP_BUY && config.command != OP_SELL) {
         Alert("[Miner] Error: 'command' must be OP_BUY or OP_SELL");
@@ -112,11 +101,6 @@ void Miner::onTick(MinerConfig &config) {
     }
 }
 
-void Miner::onCommandFailure() {
-    Alert("[Miner] Error: command failure: lastError=" + GetLastError());
-    ExpertRemove();
-}
-
 
 /*****************************************************
 *************        HEIKIN ASHI         *************
@@ -149,4 +133,13 @@ void getHeikinAshiBars(string symbol, int timeframe, int count, HeikinAshiBar &b
 
     bars[i] = bar;
   }
+}
+
+
+/*****************************************************
+*************           UTILS            *************
+******************************************************/
+void onCommandFailure() {
+    Alert("[Miner] Error: command failure: lastError=" + GetLastError());
+    ExpertRemove();
 }
