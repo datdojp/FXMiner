@@ -15,21 +15,20 @@ struct MinerConfig {
     bool shouldSetTrailingStop;
     double trailingStopMinDistance;
     double trailingStopBuffer;
+
+    double minOpenPrice;
+    double maxOpenPrice;
 };
 
 void minerOnTick(MinerConfig &config) {
-    // validate config
-    if (config.command != OP_BUY && config.command != OP_SELL) {
-        Alert("[Miner] Error: 'command' must be OP_BUY or OP_SELL");
-        ExpertRemove();
-        return;
-    }
-
     int i;
 
     // collect data from current open postions
     double ask = MarketInfo(config.symbol, MODE_ASK);
     double bid = MarketInfo(config.symbol, MODE_BID);
+    double openPrice = config.command == OP_BUY ? ask : bid;
+    double closePrice = config.command == OP_BUY ? bid : ask;
+    double sign = config.command == OP_BUY ? 1 : -1;
     int closablePositionTickets[];
     int trailingStoppablePositionTickets[];
     double trailingStoppablePositionProfits[];
@@ -43,8 +42,8 @@ void minerOnTick(MinerConfig &config) {
         if (OrderSymbol() != config.symbol) { continue; }
         if (OrderType() != config.command) { continue; }
         if (OrderMagicNumber() != config.magic) { continue; }
-        double profit = OrderType() == OP_BUY ? bid - OrderOpenPrice() : OrderOpenPrice() - ask;
-        double distance = OrderType() == OP_BUY ? OrderOpenPrice() - ask : bid - OrderOpenPrice();
+        double profit = sign * (closePrice - OrderOpenPrice());
+        double distance = sign * (OrderOpenPrice() - openPrice);
         if (profit > config.takeProfit) {
             ArrayResize(closablePositionTickets, ArraySize(closablePositionTickets) + 1);
             closablePositionTickets[ArraySize(closablePositionTickets) - 1] = OrderTicket();
@@ -90,13 +89,14 @@ void minerOnTick(MinerConfig &config) {
     }
 
     // open new position if needed
-    if (config.shouldCreateOrder) {
-        if (lowestDistance >= config.distance) {
-            double currentPrice = config.command == OP_BUY ? ask : bid;
-            if (OrderSend(config.symbol, config.command, config.lots, currentPrice, config.slippage, 0, 0, NULL, config.magic) == -1) {
-                onCommandFailure();
-                return;
-            }
+    if (
+        config.shouldCreateOrder &&
+        config.minOpenPrice <= openPrice && openPrice <= config.maxOpenPrice &&
+        lowestDistance >= config.distance
+    ) {
+        if (OrderSend(config.symbol, config.command, config.lots, openPrice, config.slippage, 0, 0, NULL, config.magic) == -1) {
+            onCommandFailure();
+            return;
         }
     }
 }
@@ -143,3 +143,8 @@ void onCommandFailure() {
     Alert("[Miner] Error: command failure: lastError=" + GetLastError());
     ExpertRemove();
 }
+
+enum COMMAND {
+    BUY = OP_BUY, // Buy
+    SELL = OP_SELL, // Sell
+};
