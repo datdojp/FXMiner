@@ -7,7 +7,7 @@ input COMMAND Command;
 input int Magic = 0;
 input double MaxOpenPrice = 1000;
 input double MinOpenPrice = 0;
-input int Slippage = 1;
+input int Slippage = 3;
 
 
 MinerConfig minerConfig = {};
