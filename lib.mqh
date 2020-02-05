@@ -148,3 +148,54 @@ enum COMMAND {
     BUY = OP_BUY, // Buy
     SELL = OP_SELL, // Sell
 };
+
+int getIndex(string &array[], string val) {
+    int length = ArraySize(array);
+    for (int i = 0; i < length; i++) {
+        if (array[i] == val) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+string SWAP_STRENGTH[] = { "CHF", "EUR", "JPY", "GBP", "CAD", "NZD", "AUD", "USD" };
+int getAutoCommand(string symbol) {
+    const int firstCurrencyIndex = getIndex(SWAP_STRENGTH, StringSubstr(symbol, 0, 3));
+    const int secondCurrencyIndex = getIndex(SWAP_STRENGTH, StringSubstr(symbol, 3, 3));
+    if (firstCurrencyIndex < 0 || secondCurrencyIndex < 0) {
+        Alert("Symbol is not supported");
+        ExpertRemove();
+    }
+    if (firstCurrencyIndex >= secondCurrencyIndex) {
+        return OP_BUY;
+    } else {
+        return OP_SELL;
+    }
+}
+
+int getAutoMagic(string symbol) {
+    const int firstCurrencyIndex = getIndex(SWAP_STRENGTH, StringSubstr(symbol, 0, 3));
+    const int secondCurrencyIndex = getIndex(SWAP_STRENGTH, StringSubstr(symbol, 3, 3));
+    if (firstCurrencyIndex < 0 || secondCurrencyIndex < 0) {
+        Alert("Symbol is not supported");
+        ExpertRemove();
+    }
+    return firstCurrencyIndex * 10 + secondCurrencyIndex;
+}
+
+/*
+bool shouldCreateOrder(int maxOpenPositions, int minDistance) {
+    const int poolHisory = 0;
+    const int poolTrades = 1;
+    int closestPositionCount = 0;
+    int closestPositionTickets[];
+    int closestPositionPool[];
+    int nTradePositions = OrdersTotal();
+    int nHistoricalPositions = OrdersHistoryTotal();
+    int i;
+    for (i = nTradePositions - 1; i > nTradePositions - 1 - maxOpenPositions; i--) {
+
+    }
+}
+*/
