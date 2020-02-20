@@ -43,7 +43,7 @@ void minerOnTick(MinerConfig &config) {
         if (OrderType() != config.command) { continue; }
         if (OrderMagicNumber() != config.magic) { continue; }
         double profit = sign * (closePrice - OrderOpenPrice());
-        double distance = sign * (OrderOpenPrice() - openPrice);
+        double distance = MathAbs(OrderOpenPrice() - openPrice);
         if (profit > config.takeProfit) {
             ArrayResize(closablePositionTickets, ArraySize(closablePositionTickets) + 1);
             closablePositionTickets[ArraySize(closablePositionTickets) - 1] = OrderTicket();
