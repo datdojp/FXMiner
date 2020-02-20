@@ -8,7 +8,7 @@ input int Magic = 0;
 input double MaxOpenPrice = 1000;
 input double MinOpenPrice = 0;
 input int Slippage = 3;
-
+input string Version = "1.0";
 
 MinerConfig minerConfig = {};
 
