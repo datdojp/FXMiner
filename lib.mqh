@@ -36,7 +36,8 @@ void minerOnTick(MinerConfig &config) {
     int ordersTotal = OrdersTotal();
     for (int pos = 0; pos < ordersTotal; pos++) {
         if (!OrderSelect(pos, SELECT_BY_POS, MODE_TRADES)) {
-            onCommandFailure();
+            Alert("[" + _Symbol + "][minerOnTick] Command failure: command=OrderSelect, index=" + pos + ", select=SELECT_BY_POS, pool=MODE_TRADES, err=" + GetLastError());
+            ExpertRemove();
             return;
         }
         if (OrderSymbol() != config.symbol) { continue; }
@@ -63,11 +64,13 @@ void minerOnTick(MinerConfig &config) {
     // close tickets if closable
     for (i = 0; i < ArraySize(closablePositionTickets); i++) {
         if (!OrderSelect(closablePositionTickets[i], SELECT_BY_TICKET, MODE_TRADES)) {
-            onCommandFailure();
+            Alert("[" + _Symbol + "][minerOnTick] Command failure: command=OrderSelect, index=" + closablePositionTickets[i] + ", select=SELECT_BY_TICKET, pool=MODE_TRADES, err=" + GetLastError());
+            ExpertRemove();
             return;
         }
         if (!OrderClose(OrderTicket(), OrderLots(), OrderClosePrice(), config.slippage)) {
-            onCommandFailure();
+            Alert("[" + _Symbol + "][minerOnTick] Command failure: command=OrderClose, ticket=" + OrderTicket() + ", lots=" + OrderLots() + ", price=" + OrderClosePrice() + ", slippage=" + config.slippage + ", err=" + GetLastError());
+            ExpertRemove();
             return;
         }
     }
@@ -76,13 +79,15 @@ void minerOnTick(MinerConfig &config) {
     if (config.shouldSetTrailingStop) {
         for (i = 0; i < ArraySize(trailingStoppablePositionTickets); i++) {
             if (!OrderSelect(trailingStoppablePositionTickets[i], SELECT_BY_TICKET, MODE_TRADES)) {
-                onCommandFailure();
+                Alert("[" + _Symbol + "][minerOnTick] Command failure: command=OrderSelect, index=" + trailingStoppablePositionTickets[i] + ", select=SELECT_BY_TICKET, pool=MODE_TRADES, err=" + GetLastError());
+                ExpertRemove();
                 return;
             }
             const double buffer = config.trailingStopBuffer * (OrderType() == OP_BUY ? 1 : -1);
             const double stoploss = NormalizeDouble(OrderOpenPrice() + buffer, MarketInfo(config.symbol, MODE_DIGITS));
             if (!OrderModify(OrderTicket(), OrderOpenPrice(), stoploss, OrderTakeProfit(), OrderExpiration())) {
-                onCommandFailure();
+                Alert("[" + _Symbol + "][minerOnTick] Command failure: command=OrderModify, ticket" + OrderTicket() + ", price=" + OrderOpenPrice() + ", stoploss=" + stoploss + ", takeprofit=" + OrderTakeProfit() + ", expiration=" + OrderExpiration() + ", err=" + GetLastError());
+                ExpertRemove();
                 return;
             }
         }
@@ -95,7 +100,8 @@ void minerOnTick(MinerConfig &config) {
         lowestDistance >= config.distance
     ) {
         if (OrderSend(config.symbol, config.command, config.lots, openPrice, config.slippage, 0, 0, NULL, config.magic) == -1) {
-            onCommandFailure();
+            Alert("[" + _Symbol + "][minerOnTick] Command failure: command=OrderSend, symbol=" + config.symbol + ", cmd=" + config.command + ", volume=" + config.lots + ", price=" + openPrice + ", slippage=" + config.slippage + ", stoploss=0, takeprofit=0, magic=" + config.magic + ", err=" + GetLastError());
+            ExpertRemove();
             return;
         }
     }
@@ -139,11 +145,6 @@ void getHeikinAshiBars(string symbol, int timeframe, int count, HeikinAshiBar &b
 /*****************************************************
 *************           UTILS            *************
 ******************************************************/
-void onCommandFailure() {
-    Alert("[Miner] Error: command failure: lastError=" + GetLastError());
-    ExpertRemove();
-}
-
 enum COMMAND {
     BUY = OP_BUY, // Buy
     SELL = OP_SELL, // Sell
@@ -164,7 +165,7 @@ int getAutoCommand(string symbol) {
     const int firstCurrencyIndex = getIndex(SWAP_STRENGTH, StringSubstr(symbol, 0, 3));
     const int secondCurrencyIndex = getIndex(SWAP_STRENGTH, StringSubstr(symbol, 3, 3));
     if (firstCurrencyIndex < 0 || secondCurrencyIndex < 0) {
-        Alert("Symbol is not supported");
+        Alert("[" + _Symbol + "][getAutoCommand] Symbol is not supported");
         ExpertRemove();
     }
     if (firstCurrencyIndex >= secondCurrencyIndex) {
@@ -178,7 +179,7 @@ int getAutoMagic(string symbol) {
     const int firstCurrencyIndex = getIndex(SWAP_STRENGTH, StringSubstr(symbol, 0, 3));
     const int secondCurrencyIndex = getIndex(SWAP_STRENGTH, StringSubstr(symbol, 3, 3));
     if (firstCurrencyIndex < 0 || secondCurrencyIndex < 0) {
-        Alert("Symbol is not supported");
+        Alert("[" + _Symbol + "][getAutoMagic] Symbol is not supported");
         ExpertRemove();
     }
     return firstCurrencyIndex * 10 + secondCurrencyIndex;
