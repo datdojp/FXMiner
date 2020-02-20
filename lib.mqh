@@ -41,7 +41,7 @@ void minerOnTick(MinerConfig &config) {
         }
         if (OrderSymbol() != config.symbol) { continue; }
         if (OrderType() != config.command) { continue; }
-        if (OrderMagicNumber() != config.magic) { continue; }
+        if (config.magic > 0 && OrderMagicNumber() != config.magic) { continue; }
         double profit = sign * (closePrice - OrderOpenPrice());
         double distance = MathAbs(OrderOpenPrice() - openPrice);
         if (profit > config.takeProfit) {
