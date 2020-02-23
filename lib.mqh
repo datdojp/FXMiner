@@ -142,6 +142,126 @@ void getHeikinAshiBars(string symbol, int timeframe, int count, HeikinAshiBar &b
 }
 
 
+/******************************************************
+*************         LOCAL STORAGE          **********
+*******************************************************/
+enum LSFieldType {
+    LS_DOUBLE = 1,
+    LS_INT = 2,
+    LS_BOOL = 3,
+    LS_STRING = 4,
+};
+
+struct LSField {
+    string name;
+    LSFieldType type;
+    double doubleValue;
+    int intValue;
+    bool boolValue;
+    string stringValue;
+};
+
+bool lsRead(string filename, LSField &fields[]) {
+    if (filename == NULL) {
+        // filename = TerminalInfoString(TERMINAL_DATA_PATH) + "\\MQL4\\Files\\"+ _Symbol + ".txt";
+        filename = _Symbol + ".txt";
+    }
+    if (!FileIsExist(filename)) {
+        Alert("[" + _Symbol + "] Local storage file not found: " + filename + ", err=" + GetLastError() + ". You must locate your file in MQL4/Files for real trading and MQL4/Tester/Files for testing");
+        return false;
+    }
+    int fileHandler = FileOpen(filename, FILE_READ | FILE_TXT, "\n");
+    if (fileHandler == INVALID_HANDLE) {
+        Alert("[" + _Symbol + "][lsRead] Unable to open file: filename=" + filename + ", err=" + GetLastError());
+        return false;
+    }
+    int count = 0;
+    while (!FileIsEnding(fileHandler)) {
+        int lineSize = FileReadInteger(fileHandler, INT_VALUE);
+        string line = FileReadString(fileHandler, lineSize);
+        string keyVal[];
+        StringSplit(line, StringGetCharacter("=", 0), keyVal);
+        if (ArraySize(keyVal) != 2) {
+            Alert("[" + _Symbol + "][lsRead] Invalid line format: " + line);
+            return false;
+        }
+        string key = keyVal[0];
+        string val = keyVal[1];
+        bool found = false;
+        for (int j = 0; j < ArraySize(fields); j++) {
+            if (StringCompare(key, fields[j].name) == 0) {
+                if (fields[j].type == LS_STRING) {
+                    fields[j].stringValue = val;
+                } else if (fields[j].type == LS_DOUBLE) {
+                    fields[j].doubleValue = StringToDouble(val);
+                } else if (fields[j].type == LS_INT) {
+                    fields[j].intValue = StringToInteger(val);
+                } else if (fields[j].type == LS_BOOL) {
+                    if (StringCompare(val, "true") == 0) {
+                        fields[j].boolValue = true;
+                    } else if (StringCompare(val, "false") == 0) {
+                        fields[j].boolValue = false;
+                    } else {
+                        Alert("[" + _Symbol + "][lsRead] Invalid bool value: " + val);
+                        return false;
+                    }
+                }
+                found = true;
+                break;
+            }
+        }
+        if (found) {
+            count++;
+        } else {
+            Alert("[" + _Symbol + "][lsRead] Unknown field in config file: " + key);
+            return false;
+        }
+    }
+    FileClose(fileHandler);
+    if (count < ArraySize(fields)) {
+        Alert("[" + _Symbol + "][lsRead] Some fields are missing in config file.");
+        return false;
+    }
+    return true;
+}
+
+void lsWrite(string filename, LSField &fields[]) {
+    string configsData = "";
+    for (int i = 0; i < ArraySize(fields); i++) {
+        configsData = configsData + fields[i].name + "=";
+        if (fields[i].type == LS_STRING) {
+            configsData = configsData + fields[i].stringValue;
+        } else if (fields[i].type == LS_DOUBLE) {
+            configsData = configsData + DoubleToString(fields[i].doubleValue);
+        } else if (fields[i].type == LS_INT) {
+            configsData = configsData + IntegerToString(fields[i].intValue);
+        } else if (fields[i].type == LS_BOOL) {
+            configsData = configsData + (fields[i].boolValue ? "true" : "false");
+        }
+        if (i < ArraySize(fields) - 1) {
+            configsData = configsData + "\n";
+        }
+    }
+    int fileHandler = FileOpen(filename, FILE_WRITE | FILE_TXT);
+    FileWriteString(fileHandler, configsData);
+    FileClose(fileHandler);
+}
+
+// convert buy/long => OP_BUY, sell/short => OP_SELL
+int lsFieldToCommand(LSField &field) {
+    const string commandString = field.stringValue;
+    if (commandString == "buy" || commandString == "long") {
+        return OP_BUY;
+    } else if (commandString == "sell" || commandString == "short") {
+        return OP_SELL;
+    } else {
+        Alert("[" + _Symbol +"][lsFieldToCommand] Invalid command: " + commandString);
+        ExpertRemove();
+        return 0;
+    }
+}
+
+
 /*****************************************************
 *************           UTILS            *************
 ******************************************************/
